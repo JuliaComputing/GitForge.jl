@@ -113,6 +113,7 @@ end
 
 endpoint(::GitLabAPI, ::typeof(get_user_repos)) =
     Endpoint(:GET, "/projects"; query=Dict("membership" => true))
+@not_implemented(api::GitLabAPI, ::typeof(get_user_repos), id::Integer)
 endpoint(::GitLabAPI, ::typeof(get_user_repos), name::AStr) =
     Endpoint(:GET, "/users/$name/repos")
 into(::GitLabAPI, ::typeof(get_user_repos)) = Vector{Project}
@@ -129,10 +130,12 @@ endpoint(::GitLabAPI, ::typeof(create_repo)) =
     Endpoint(:POST, "/projects")
 endpoint(::GitLabAPI, ::typeof(create_repo), id::Integer) =
     Endpoint(:POST, "/projects/user/$id")
+@not_implemented(api::GitLabAPI, ::typeof(create_repo), repo::AStr)
 into(::GitLabAPI, ::typeof(create_repo)) = Project
 
 endpoint(::GitLabAPI, ::typeof(is_collaborator), owner::AStr, repo::AStr, id::Integer) =
     Endpoint(:GET, "/projects/$(encode(owner, repo))/members/$id"; allow_404=true)
+@not_implemented(api::GitLabAPI, ::typeof(is_collaborator), owner::AStr, repo::AStr, id::AStr)
 postprocessor(::GitLabAPI, ::typeof(is_collaborator)) = DoSomething(ismember)
 into(::GitLabAPI, ::typeof(is_collaborator)) = Bool
 
