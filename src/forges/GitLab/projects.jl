@@ -131,6 +131,7 @@ endpoint(::GitLabAPI, ::typeof(create_repo)) =
 endpoint(::GitLabAPI, ::typeof(create_repo), id::Integer) =
     Endpoint(:POST, "/projects/user/$id")
 @not_implemented(api::GitLabAPI, ::typeof(create_repo), repo::AStr)
+@not_implemented(api::GitLabAPI, ::typeof(create_repo), namespace::AStr, repo::AStr)
 into(::GitLabAPI, ::typeof(create_repo)) = Project
 
 endpoint(::GitLabAPI, ::typeof(is_collaborator), owner::AStr, repo::AStr, id::Integer) =

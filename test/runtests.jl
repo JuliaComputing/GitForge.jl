@@ -109,7 +109,7 @@ function test_api(api; auth = false)
         create_user, (delete_user, mock_id(api)),
         get_user_repos, (get_user_repos, "fred"), (get_user_repos, mock_id(api)),
         (get_repo, "owner/repo"), (get_repo, "owner", "repo"), (get_repo, "owner", "subgroup", "repo"),
-        create_repo, (create_repo, "org"), (create_repo, mock_id(api)),
+        create_repo, (create_repo, "org"), (create_repo, mock_id(api)), (create_repo, "namespace", "repo",
         (get_branch, "owner", "repo", "branch"),
         (get_branches, "owner", "repo"),
         (delete_branch, "owner", "repo", "branch"),

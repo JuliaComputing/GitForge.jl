@@ -135,6 +135,7 @@ endpoint(::GitHubAPI, ::typeof(create_repo)) =
 endpoint(::GitHubAPI, ::typeof(create_repo), org::AStr) =
     Endpoint(:POST, "/orgs/$org/repos")
 @not_implemented(::GitHubAPI, ::typeof(create_repo), ::Int64)
+@not_implemented(api::GitHubAPI, ::typeof(create_repo), namespace::AStr, repo::AStr)
 into(::GitHubAPI, ::typeof(create_repo)) = Repo
 
 endpoint(::GitHubAPI, ::typeof(is_collaborator), owner::AStr, repo::AStr, user::AStr) =

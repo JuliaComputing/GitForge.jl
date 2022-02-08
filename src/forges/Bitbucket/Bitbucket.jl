@@ -8,7 +8,7 @@ module Bitbucket
 import ..GitForge: endpoint, into, postprocessor, ForgeAPIError
 import ..GitForge.GitHub: ismemberorcollaborator
 import Base.@kwdef, Base.Meta.quot
-import StructTypes: Struct, UnorderedStruct, constructfrom, StructType, construct
+import StructTypes: Struct, UnorderedStruct, construct, constructfrom, StructType
 
 using ..GitForge
 using ..GitForge:
@@ -60,7 +60,7 @@ Create a Bitbucket API client.
 - `on_rate_limit::OnRateLimit=ORL_THROW`: Behaviour on exceeded rate limits.
 - `workspace::AbstractString=""`: slug for chosen workspace
 """
-struct BitbucketAPI <: Forge
+mutable struct BitbucketAPI <: Forge
     token::AbstractToken
     url::AbstractString
     hasrl::Bool
@@ -120,12 +120,6 @@ constructfield(::Type{FT}, v::AbstractString) where {FT <: Union{DateTime, Nothi
 @inline function (f::BBStructClosure{T})(_i, nm, ::Type{FT}) where {T, FT}
     hasfield(T, nm) ? constructfield(FT, getfield(f.obj, nm)) : nothing
 end
-
-StructTypes.constructfrom(::Struct, ::Type{ST}, ::Struct, obj::OT) where {ST <: NamedTuple, OT <: ST} =
-    obj
-
-StructTypes.constructfrom(::UnorderedStruct, ::Type{ST}, ::UnorderedStruct, obj::OT) where {ST <: NamedTuple, OT <: ST} =
-    obj
 
 function collect_extras(type::Type, kw::NamedTuple)
     names = fieldnames(type)
