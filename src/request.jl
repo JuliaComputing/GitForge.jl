@@ -9,12 +9,14 @@ An error encountered during the HTTP request.
 - `stacktrace::StackTrace`
 """
 struct HTTPError{E<:Exception} <: ForgeError
+    request::Union{HTTP.Request, Nothing}
     response::Union{HTTP.Response, Nothing}
     exception::E
     stacktrace::StackTrace
 end
 
-HTTPError(ex::Exception, st::StackTrace) = HTTPError(nothing, ex, st)
+HTTPError(ex::Exception, st::StackTrace) = HTTPError(nothing, nothing, ex, st)
+HTTPError(response, exception, stacktrace) = HTTPError(nothing, response, exception, stacktrace)
 
 """
 An error encountered during response postprocessing.
@@ -25,10 +27,13 @@ An error encountered during response postprocessing.
 - `stacktrace::StackTrace`
 """
 struct PostProcessorError{E<:Exception} <: ForgeError
+    request::Union{Nothing, HTTP.Request}
     response::HTTP.Response
     exception::E
     stacktrace::StackTrace
 end
+
+PostProcessorError(res, ex, trace) = PostProcessorError(nothing, res, ex, trace)
 
 """
 A signal that a rate limit has been exceeded.
@@ -130,25 +135,26 @@ function request(
         HTTP.nobody
     end
 
+    req = nothing
     resp = try
-        HTTP.request(
+        req = HTTP.request(
             ep.method, url, headers, body;
             query=query, opts...,
             status_exception=false, # We handle status exceptions ourselvse.
         )
     catch e
-        rethrow(HTTPError(e, stacktrace(catch_backtrace())))
+        rethrow(HTTPError(HTTP.Request(ep.method, url, headers, body), e, stacktrace(catch_backtrace())))
     end
 
     has_rate_limits(f, fun) && rate_limit_update!(f, fun, resp)
 
     resp.status >= 300 && !(resp.status == 404 && ep.allow_404) &&
-        throw(HTTPError(resp, HTTP.StatusError(resp.status, resp), stacktrace()))
+        throw(HTTPError(req, resp, HTTP.StatusError(resp.status, resp), stacktrace()))
 
     return try
         postprocess(postprocessor(f, fun), resp, into(f, fun)), resp
     catch e
-        rethrow(PostProcessorError(resp, e, stacktrace(catch_backtrace())))
+        rethrow(PostProcessorError(req, resp, e, stacktrace(catch_backtrace())))
     end
 end
 
