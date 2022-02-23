@@ -132,6 +132,7 @@ function request(
         HTTP.nobody
     end
 
+    diag && @info "GitForge making request, diag = $diag"
     resp = try
         HTTP.request(
             ep.method, url, headers, body;

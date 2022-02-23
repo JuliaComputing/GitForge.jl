@@ -14,7 +14,11 @@ const HEADERS = ["Content-Type" => "application/json"]
 
 diag = false
 
-set_diag(value::Bool) = global diag = value
+function set_diag(value::Bool)
+    global diag = value
+
+    @info "GitForge: set diag to $diag"
+end
 
 function __init__()
     proj = read(joinpath(dirname(@__DIR__), "Project.toml"), String)
