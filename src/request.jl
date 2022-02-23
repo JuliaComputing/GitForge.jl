@@ -118,6 +118,8 @@ function request(
     request_opts=Dict(),
     kwargs...,
 )
+    global diag
+
     rate_limit(f, fun)
     url = base_url(f) * ep.url
     headers = vcat(request_headers(f, fun), ep.headers, headers)
@@ -135,6 +137,7 @@ function request(
             ep.method, url, headers, body;
             query=query, opts...,
             status_exception=false, # We handle status exceptions ourselvse.
+            (diag ? (; verbose=2) : (;)),
         )
     catch e
         rethrow(HTTPError(e, stacktrace(catch_backtrace())))
@@ -143,7 +146,11 @@ function request(
     has_rate_limits(f, fun) && rate_limit_update!(f, fun, resp)
 
     resp.status >= 300 && !(resp.status == 404 && ep.allow_404) &&
-        throw(HTTPError(resp, HTTP.StatusError(resp.status, resp), stacktrace()))
+        (
+            @warn "Bad request: $(HTTP.Request(ep.method, url, headers, body))"
+            ;
+            throw(HTTPError(resp, HTTP.StatusError(resp.status, resp), stacktrace()))
+        )
 
     return try
         postprocess(postprocessor(f, fun), resp, into(f, fun)), resp

@@ -12,6 +12,10 @@ using UUIDs: UUID
 const AStr = AbstractString
 const HEADERS = ["Content-Type" => "application/json"]
 
+diag = false
+
+set_diag(value::Bool) = global diag = value
+
 function __init__()
     proj = read(joinpath(dirname(@__DIR__), "Project.toml"), String)
     pkgver = match(r"version = \"(.+)\"", proj)[1]
