@@ -146,11 +146,7 @@ function request(
     has_rate_limits(f, fun) && rate_limit_update!(f, fun, resp)
 
     resp.status >= 300 && !(resp.status == 404 && ep.allow_404) &&
-        (
-            @warn "Bad request: $(HTTP.Request(ep.method, url, headers, body))"
-            ;
-            throw(HTTPError(resp, HTTP.StatusError(resp.status, resp), stacktrace()))
-        )
+        throw(HTTPError(resp, HTTP.StatusError(resp.status, resp), stacktrace()))
 
     return try
         postprocess(postprocessor(f, fun), resp, into(f, fun)), resp
