@@ -58,6 +58,21 @@ endpoint(::BitbucketAPI, ::typeof(create_repo), workspace, repo) =
 @not_implemented(::BitbucketAPI, ::typeof(create_repo), ::UUID)
 into(::BitbucketAPI, ::typeof(create_repo)) = Repo
 
+function is_bitbucket_collaborator(resp::HTTP.Response)
+    if HTTP.status(resp) == 200
+        d = JSON2.read(String(HTTP.body(resp)), Dict)
+        return haskey(d, "values") && length(d["values"]) > 0
+    end
+    false
+end
+
+endpoint(::BitbucketAPI, ::typeof(is_collaborator), wrksp::AStr, repo::AStr) =
+    Endpoint(:GET, "/user/permissions/repositories";
+             allow_404=true,
+             query=Dict(
+                 :q=> "repository.full_name=\"$wrksp/$repo\""
+             ),
+             )
 endpoint(::BitbucketAPI, ::typeof(is_collaborator), wrksp::AStr, repo::AStr, user::AStr) =
     Endpoint(:GET, "/workspaces/$wrksp/permissions/repositories/$repo";
              allow_404=true,
@@ -72,11 +87,11 @@ endpoint(::BitbucketAPI, ::typeof(is_collaborator), wrksp::String, repo::String,
                  :q=> "user.uuid=\"{$user}\""
              )
              )
-postprocessor(::BitbucketAPI, ::typeof(is_collaborator)) = DoSomething(ismemberorcollaborator)
+postprocessor(::BitbucketAPI, ::typeof(is_collaborator)) = DoSomething(is_bitbucket_collaborator)
 into(::BitbucketAPI, ::typeof(is_collaborator)) = Bool
 
-endpoint(api::BitbucketAPI, ::typeof(get_file_contents), wrksp::AStr, repo::AStr, path::AStr; ref = "master") =
-    Endpoint(:GET, "/repositories/$wrksp/$repo/src/$ref/$path")
+endpoint(api::BitbucketAPI, ::typeof(get_file_contents), wrksp::AStr, repo::AStr, path::AStr) =
+    Endpoint(:GET, "/repositories/$wrksp/$repo/src/$path")
 @not_implemented(::BitbucketAPI, ::typeof(get_file_contents), repo::UUID, path::AStr)
 postprocessor(::BitbucketAPI, ::typeof(get_file_contents)) = DoSomething() do req
     String(req.body)

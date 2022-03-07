@@ -175,6 +175,7 @@ Get a commit from a repository.
 
 Check whether or not a user is a collaborator on a repository.
 """
+@endpoint is_collaborator(owner::AStr, repo::AStr)
 @endpoint is_collaborator(owner::AStr, repo::AStr, name_or_id::NameOrId)
 
 """
