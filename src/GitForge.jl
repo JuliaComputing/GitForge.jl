@@ -5,7 +5,7 @@ using Base.StackTraces: StackTrace
 
 using Dates
 using Dates: Period, UTC, now
-using HTTP: HTTP
+using HTTP: HTTP, HTTP.URIs.escapeuri
 using JSON2: JSON2
 using UUIDs: UUID
 
