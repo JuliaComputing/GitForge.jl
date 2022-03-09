@@ -20,7 +20,6 @@ using ..GitForge:
 using Dates
 using HTTP
 using JSON2
-using HTTP.URIs: escapeuri
 
 export GitLabAPI, NoToken, OAuth2Token, PersonalAccessToken
 

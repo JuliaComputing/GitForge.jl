@@ -141,7 +141,7 @@ postprocessor(::GitLabAPI, ::typeof(is_collaborator)) = DoSomething(ismember)
 into(::GitLabAPI, ::typeof(is_collaborator)) = Bool
 
 endpoint(::GitLabAPI, ::typeof(get_file_contents), id::Integer, path::AStr) =
-    Endpoint(:GET, "/projects/$id/repository/files/$(escapeuri(path))"; query=Dict(:ref => "master"))
+    Endpoint(:GET, "/projects/$id/repository/files/$(HTTP.escapeuri(path))"; query=Dict(:ref => "master"))
 endpoint(::GitLabAPI, ::typeof(get_file_contents), owner::AStr, repo::AStr, path::AStr) =
-    Endpoint(:GET, "/projects/$(encode(owner, repo))/repository/files/$(escapeuri(path))"; query=Dict(:ref => "master"))
+    Endpoint(:GET, "/projects/$(encode(owner, repo))/repository/files/$(HTTP.escapeuri(path))"; query=Dict(:ref => "master"))
 into(::GitLabAPI, ::typeof(get_file_contents)) = FileContents
