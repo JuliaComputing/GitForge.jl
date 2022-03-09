@@ -21,6 +21,8 @@ using Dates
 using HTTP
 using JSON2
 
+import HTTP.URIs.escapeuri
+
 export GitLabAPI, NoToken, OAuth2Token, PersonalAccessToken
 
 const DEFAULT_URL = "https://gitlab.com/api/v4"
