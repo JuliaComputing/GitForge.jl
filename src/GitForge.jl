@@ -5,9 +5,11 @@ using Base.StackTraces: StackTrace
 
 using Dates
 using Dates: Period, UTC, now
-using HTTP: HTTP, HTTP.URIs.escapeuri
+using HTTP: HTTP
 using JSON2: JSON2
 using UUIDs: UUID
+
+import HTTP.URIs.escapeuri
 
 const AStr = AbstractString
 const HEADERS = ["Content-Type" => "application/json"]
