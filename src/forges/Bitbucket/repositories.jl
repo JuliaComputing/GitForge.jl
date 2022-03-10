@@ -52,7 +52,7 @@ endpoint(api::BitbucketAPI, ::typeof(get_repo), workspace::AStr, repo::AStr) =
 @not_implemented(::BitbucketAPI, ::typeof(get_repo), ::String, ::String, ::String)
 into(::BitbucketAPI, ::typeof(get_repo)) = Repo
 
-endpoint(::BitbucketAPI, ::typeof(create_repo), workspace, repo) =
+endpoint(::BitbucketAPI, ::typeof(create_repo), workspace::AStr, repo::AStr) =
     Endpoint(:POST, "/repositories/$workspace/$repo")
 @not_implemented(::BitbucketAPI, ::typeof(create_repo), org::AStr)
 @not_implemented(::BitbucketAPI, ::typeof(create_repo), ::UUID)

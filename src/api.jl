@@ -67,6 +67,7 @@ Get a repository by owner and name or ID.
 Create a repository.
 If using GitHub and you want to create a repository in an organization, pass the organization name as argument.
 """
+@endpoint create_repo(owner::AStr, repo::AStr)
 @endpoint create_repo(owner::NameOrId)
 @endpoint create_repo()
 
