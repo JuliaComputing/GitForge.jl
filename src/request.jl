@@ -1,11 +1,6 @@
 # Exceptions.
 
 """
-The supertype of all other exceptions raised by API functions.
-"""
-abstract type ForgeError <: Exception end
-
-"""
 An error encountered during the HTTP request.
 
 ## Fields
@@ -19,7 +14,7 @@ struct HTTPError{E<:Exception} <: ForgeError
     stacktrace::StackTrace
 end
 
-HTTPError(ex::Exception, st::StackTrace) = HTTPError(nothing, ex, st)
+HTTPError(ex::Exception, st::StackTrace) = HTTPError(nothing, nothing, ex, st)
 
 """
 An error encountered during response postprocessing.
@@ -123,17 +118,9 @@ function request(
     request_opts=Dict(),
     kwargs...,
 )
-    if has_rate_limits(f, fun) && rate_limit_check(f, fun)
-        orl = on_rate_limit(f, fun)
-        if orl === ORL_THROW
-            throw(RateLimitedError(rate_limit_period(f, fun)))
-        elseif orl === ORL_WAIT
-            rate_limit_wait(f, fun)
-        else
-            @warn "Ignoring unknown rate limit behaviour $orl"
-        end
-    end
+    global diag
 
+    rate_limit(f, fun)
     url = base_url(f) * ep.url
     headers = vcat(request_headers(f, fun), ep.headers, headers)
     query = merge(request_query(f, fun), ep.query, query)
@@ -145,14 +132,16 @@ function request(
         HTTP.nobody
     end
 
+    diag && @info "GitForge making request, diag = $diag"
     resp = try
         HTTP.request(
             ep.method, url, headers, body;
             query=query, opts...,
             status_exception=false, # We handle status exceptions ourselvse.
+            verbose = diag ? 2 : 0,
         )
     catch e
-        throw(HTTPError(e, stacktrace(catch_backtrace())))
+        rethrow(HTTPError(e, stacktrace(catch_backtrace())))
     end
 
     has_rate_limits(f, fun) && rate_limit_update!(f, fun, resp)
@@ -163,6 +152,19 @@ function request(
     return try
         postprocess(postprocessor(f, fun), resp, into(f, fun)), resp
     catch e
-        throw(PostProcessorError(resp, e, stacktrace(catch_backtrace())))
+        rethrow(PostProcessorError(resp, e, stacktrace(catch_backtrace())))
+    end
+end
+
+function rate_limit(f::Forge, fun::Function)
+    if has_rate_limits(f, fun) && rate_limit_check(f, fun)
+        orl = on_rate_limit(f, fun)
+        if orl === ORL_THROW
+            throw(RateLimitedError(rate_limit_period(f, fun)))
+        elseif orl === ORL_WAIT
+            rate_limit_wait(f, fun)
+        else
+            @warn "Ignoring unknown rate limit behaviour $orl"
+        end
     end
 end

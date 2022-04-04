@@ -14,7 +14,8 @@ using ..GitForge:
     OnRateLimit,
     RateLimiter,
     HEADERS,
-    ORL_THROW
+    ORL_THROW,
+    @not_implemented
 
 using Dates
 using HTTP

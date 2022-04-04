@@ -15,7 +15,8 @@ using ..GitForge:
     OnRateLimit,
     RateLimiter,
     HEADERS,
-    ORL_THROW
+    ORL_THROW,
+    @not_implemented
 
 using Dates
 using HTTP
@@ -119,6 +120,6 @@ include("branches.jl")
 include("tags.jl")
 include("comments.jl")
 
-ismemberorcollaborator(r::HTTP.Response) = r.status != 404
+ismemberorcollaborator(r::HTTP.Response) = !(r.status in [403, 404])
 
 end

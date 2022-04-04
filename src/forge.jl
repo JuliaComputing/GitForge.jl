@@ -1,3 +1,19 @@
+struct ForgeAPIError <: GitForge.ForgeError
+    message::String
+end
+
+struct ForgeAPINotImplemented <: GitForge.ForgeError
+    func::Function
+    args::Tuple
+    noted::Bool
+    api
+end
+
+Base.showerror(io::IO, e::ForgeAPINotImplemented) =
+    print(io, typeof(e.api), " has not implemented the function $(e.func) for arguments $(typeof.((e.api, e.func, e.args...)))\n  use: @not_implemented(::$(typeof(e.api)), ::typeof($(e.func)), $(join(map(a-> "::$(typeof(a))", e.args), ", ")))")
+
+not_implemented(api, func, args...; noted = true) = throw(ForgeAPINotImplemented(func, args, noted, api))
+
 """
 A forge is an online platform for Git repositories.
 The most common example is [GitHub](https://github.com).
@@ -93,8 +109,16 @@ Returns an [`Endpoint`](@ref) for a given function.
 Trailing arguments are usually important for routing.
 For example, [`get_user`](@ref) can take some ID parameter which becomes part of the URL.
 """
-endpoint(f::T, ::Function, args...) where T <: Forge =
-    error("$T has not implemented this function")
+endpoint(forge::T, func::Function, args...) where T <: Forge =
+    throw(ForgeAPINotImplemented(func, args, false, forge))
+
+macro not_implemented(api::Expr, func::Expr, rest...)
+    api_name = length(api.args) == 2 ? api.args[1] : :api
+    func_name = func.args[1].args[end]
+    rest = [rest[n].head !== :(::) ? rest[n] : :($(Symbol("a$n"))::$(rest[n].args[end])) for n in 1:length(rest)]
+    rest_names = map(a-> a.head !== :(::) ? a : a.args[1], rest)
+    :(endpoint(api::$(esc((api.args[end]))), $(esc(func)), $(rest...)) = throw(ForgeAPINotImplemented($func_name, ($(rest_names...),), true, $api_name)))
+end
 
 """
     has_rate_limits(::Forge, ::Function) -> Bool
