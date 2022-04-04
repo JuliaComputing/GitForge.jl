@@ -61,7 +61,8 @@ into(::BitbucketAPI, ::typeof(create_repo)) = Repo
 function is_bitbucket_collaborator(resp::HTTP.Response)
     if HTTP.status(resp) == 200
         d = JSON2.read(String(HTTP.body(resp)), Dict)
-        return haskey(d, "values") && length(d["values"]) > 0
+        return haskey(d, "values") && length(d["values"]) > 0 &&
+            d["values"][1]["permissions"] in ["write" "admin"]
     end
     false
 end
@@ -73,20 +74,8 @@ endpoint(::BitbucketAPI, ::typeof(is_collaborator), wrksp::AStr, repo::AStr) =
                  :q=> "repository.full_name=\"$wrksp/$repo\""
              ),
              )
-endpoint(::BitbucketAPI, ::typeof(is_collaborator), wrksp::AStr, repo::AStr, user::AStr) =
-    Endpoint(:GET, "/workspaces/$wrksp/permissions/repositories/$repo";
-             allow_404=true,
-             query=Dict(
-                 :q=> "user.nickname=\"$user\""
-             )
-             )
-endpoint(::BitbucketAPI, ::typeof(is_collaborator), wrksp::String, repo::String, user::UUID) =
-    Endpoint(:GET, "/workspaces/$wrksp/permissions/repositories/$repo";
-             allow_404=true,
-             query=Dict(
-                 :q=> "user.uuid=\"{$user}\""
-             )
-             )
+@not_implemented(::BitbucketAPI, ::typeof(is_collaborator), wrksp::AStr, repo::AStr, user::AStr)
+@not_implemented(::BitbucketAPI, ::typeof(is_collaborator), wrksp::String, repo::String, user::UUID)
 postprocessor(::BitbucketAPI, ::typeof(is_collaborator)) = DoSomething(is_bitbucket_collaborator)
 into(::BitbucketAPI, ::typeof(is_collaborator)) = Bool
 
