@@ -61,7 +61,8 @@ into(::BitbucketAPI, ::typeof(create_repo)) = Repo
 function is_bitbucket_collaborator(resp::HTTP.Response)
     if HTTP.status(resp) == 200
         d = JSON2.read(String(HTTP.body(resp)), Dict)
-        return haskey(d, "values") && length(d["values"]) > 0
+        return haskey(d, "values") && length(d["values"]) > 0 &&
+            d["values"][1]["permissions"] in ["write" "admin"]
     end
     false
 end
