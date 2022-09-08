@@ -6,7 +6,7 @@
     values::Vector{T}
     _extras::NamedTuple
 end
-@json_struct Page
+@struct_def Page
 
 struct BBPaginator{FRG, P}
     api::FRG

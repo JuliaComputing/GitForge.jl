@@ -1,21 +1,18 @@
-@json struct PullRequestBranch
+@json_struct struct PullRequestBranch
     default_merge_strategy::String
     merge_strategies::Vector{String}
     name::String
 end
-@json_struct PullRequestBranch
 
-@json struct PullRequestCommit
+@json_struct struct PullRequestCommit
     hash::String
 end
-@json_struct PullRequestCommit
 
-@json struct PullRequestEndpoint
+@json_struct struct PullRequestEndpoint
     branch::Branch
     commit::PullRequestCommit
     repository::Repo
 end
-@json_struct PullRequestEndpoint
 
 """
     RenderedPullRequestMarkup
@@ -23,14 +20,13 @@ end
 title, description, and reason are Dicts like:
 Dict("raw"=> "<string>", "markup"=> "<string>", "html"=> "<string>")
 """
-@json struct RenderedPullRequestMarkup
+@json_struct struct RenderedPullRequestMarkup
     description::Dict{String, Any}
     reason::Dict{String, Any}
     title::Dict{String, Any}
 end
-@json_struct RenderedPullRequestMarkup
 
-@json struct PullRequest
+@json_struct struct PullRequest
     author::User
     close_source_branch::Bool
     closed_by::Union{User, Nothing}
@@ -52,7 +48,6 @@ end
     title::String
     updated_on::DateTime
 end
-@json_struct PullRequest
 
 @not_implemented(::BitbucketAPI, ::typeof(get_pull_request), ::String, ::String, ::UUID)
 @not_implemented(::BitbucketAPI, ::typeof(get_pull_request), ::UUID, ::UUID)

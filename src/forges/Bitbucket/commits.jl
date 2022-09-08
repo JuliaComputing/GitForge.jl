@@ -1,19 +1,17 @@
-@json struct Author
+@json_struct struct Author
     raw::String
     user::User
 end
-@json_struct Author
 
-@json struct Participant
+@json_struct struct Participant
     user::User
     role::String
     approved::Bool
     state::String
     participated_on::Date
 end
-@json_struct Participant
 
-@json struct Commit
+@json_struct struct Commit
     hash::String
     data::DateTime
     author::Author
@@ -24,7 +22,6 @@ end
     repository::Repo
     participants::Vector{Participant}
 end
-@json_struct Commit
 
 endpoint(::BitbucketAPI, ::typeof(get_commit), workspace::AStr, repo::AStr, ref::AStr) =
     Endpoint(:GET, "/repositories/$workspace/$repo/commit/$ref")
