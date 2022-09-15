@@ -91,17 +91,20 @@ GitForge.rate_limit_period(b::BitbucketAPI, ::Function) = GitForge.rate_limit_pe
 GitForge.rate_limit_update!(b::BitbucketAPI, ::Function, r::HTTP.Response) =
     GitForge.rate_limit_update!(b.rl_general, r)
 
-cvt_date(str::AbstractString) =
-    ZonedDateTime(replace(str, r"(\.[0-9]{3})([0-9]*)\+" => s"\1+")).utc_datetime
-
-function zdate(kw::NamedTuple, prop::Symbol)
-    !haskey(kw, prop) && return (;)
-    (; prop =>
-        ZonedDateTime(replace(kw[prop], r"(\.[0-9]{3})([0-9]*)\+" => s"\1+")).utc_datetime)
+struct JSON_Struct <: GitForge.PostProcessor
+    f::Function
 end
+JSON_Struct() = JSON_Struct(identity)
 
-struct BBStructClosure{T}
-    obj::T
+function GitForge.postprocess(p::JSON_Struct, r::HTTP.Response, ::Type{T}) where T
+    data = JSON2.read(IOBuffer(r.body))
+    converted = try
+        constructfrom(T, data)
+    catch err
+        @error "Error converting to type $T: $data" exception=(err,catch_backtrace())
+        rethrow(err)
+    end
+    p.f(converted)
 end
 
 constructfield(::Type{FT}, v) where {FT} = constructfrom(FT, v)
@@ -117,44 +120,29 @@ constructfield(::Type{FT}, v::AbstractString) where {FT <: Union{Date, Nothing}}
 constructfield(::Type{FT}, v::AbstractString) where {FT <: Union{DateTime, Nothing}} =
     DateTime(ZonedDateTime(replace(v, r"(\.[0-9]{3})([0-9]*)\+" => s"\1+")))
 
-@inline function (f::BBStructClosure{T})(_i, nm, ::Type{FT}) where {T, FT}
-    hasfield(T, nm) ? constructfield(FT, getfield(f.obj, nm)) : nothing
-end
-
-function collect_extras(type::Type, kw::NamedTuple)
-    names = fieldnames(type)
-    main = []
-    extras = []
-    for k in keys(kw)
-        push!(k in names ? main : extras, k => kw[k])
-    end
-    (; main..., _extras = (; extras...))
-end
-
-sortkw(kw)=(;sort([pairs(kw)...], by=p->p[1])...)
-
-struct JSON_Struct <: GitForge.PostProcessor
-    f::Function
-end
-JSON_Struct() = JSON_Struct(identity)
-
-function GitForge.postprocess(p::JSON_Struct, r::HTTP.Response, ::Type{T}) where T
-    data = JSON2.read(IOBuffer(r.body))
-    p.f(constructfrom(T, JSON2.read(IOBuffer(r.body))))
-end
-
-macro json_struct(type)
+macro struct_def(type::Symbol)
     quote
-        StructTypes.StructType(::Type{$type}) = UnorderedStruct()
+        StructTypes.StructType(::Type{$type}) = StructTypes.DictType()
 
-        StructTypes.constructfrom(::Struct, ::Type{$type}, ::Union{StructTypes.Mutable, StructTypes.Struct}, obj) =
-            StructTypes.construct(BBStructClosure(obj), $type)
+        StructTypes.construct(::Type{$type}, x::Dict; kw...) =
+            $type(;
+                  [k=> constructfield(fieldtype($type, k), v)
+                   for (k, v) in x if hasfield($type, k)]...,
+                  _extras = Dict(kw..., [k=> v for (k, v) in x if !hasfield($type, k)]...),
+                  )
 
-        function StructTypes.constructfrom(t::Struct, ::Type{$type}, kw::NamedTuple)
-            kw = collect_extras($type, kw)
-            constructfrom(UnorderedStruct(), $type, StructType(NamedTuple), kw)
-        end
+        StructTypes.keyvaluepairs(obj::$type) = [
+            [k=>getfield(obj, k) for k in fieldnames($type) if k != :_extras]...,
+            pairs(obj._extras)...,
+        ]
     end
+end
+
+macro json_struct(decl::Expr)
+    type = decl.args[2]
+    block = macroexpand(Bitbucket, :(@json $decl))
+    push!(block.args, macroexpand(Bitbucket, :(@struct_def $type)))
+    esc(block)
 end
 
 include("pagination.jl")

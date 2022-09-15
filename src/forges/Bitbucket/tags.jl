@@ -1,9 +1,8 @@
-@json struct Tag
+@json_struct struct Tag
     links::NamedTuple
     name::String
     target::Commit
 end
-@json_struct Tag
 
 endpoint(::BitbucketAPI, ::typeof(get_tags), workspace::String, repo::String) = Endpoint(:GET, "/repositories/$workspace/$repo/refs/tags")
 @not_implemented(::BitbucketAPI, ::typeof(get_tags), ::UUID)

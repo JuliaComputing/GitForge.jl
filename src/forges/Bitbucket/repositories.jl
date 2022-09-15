@@ -1,25 +1,22 @@
-@json struct Project
+@json_struct struct Project
     key::String
     links::NamedTuple
     name::String
     uuid::UUID
 end
-@json_struct Project
 
-@json struct Branch
+@json_struct struct Branch
     name::String
 end
-@json_struct Branch
 
-@json struct Workspace
+@json_struct struct Workspace
     links::NamedTuple
     name::String
     slug::String
     uuid::UUID
 end
-@json_struct Workspace
 
-@json mutable struct Repo
+@json_struct mutable struct Repo
     created_on::DateTime
     description::String
     fork_policy::String
@@ -40,7 +37,6 @@ end
     website::String
     workspace::Workspace
 end
-@json_struct Repo
 
 @not_implemented(::BitbucketAPI, ::typeof(get_user_repos))
 @not_implemented(::BitbucketAPI, ::typeof(get_user_repos), ::String)

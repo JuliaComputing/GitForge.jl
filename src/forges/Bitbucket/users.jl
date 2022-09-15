@@ -1,4 +1,4 @@
-@json struct User
+@json_struct struct User
     account_id::String
     account_status::String
     created_on::DateTime
@@ -13,13 +13,11 @@
     uuid::UUID
     website::String
 end
-@json_struct User
 
-@json struct WorkspaceMembership
+@json_struct struct WorkspaceMembership
     links::NamedTuple
     user::User
 end
-@json_struct WorkspaceMembership
 
 endpoint(::BitbucketAPI, ::typeof(get_user)) = Endpoint(:GET, "/user")
 endpoint(::BitbucketAPI, ::typeof(get_user), name::AStr) =
