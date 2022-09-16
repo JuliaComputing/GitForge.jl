@@ -6,8 +6,9 @@ using Base.StackTraces: StackTrace
 using Dates
 using Dates: Period, UTC, now
 using HTTP: HTTP
-using JSON2: JSON2
 using UUIDs: UUID
+using JSON3: JSON3
+using StructTypes: StructTypes, UnorderedStruct
 
 const AStr = AbstractString
 const HEADERS = ["Content-Type" => "application/json"]
@@ -20,7 +21,7 @@ function set_diag(value::Bool)
     @info "GitForge: set diag to $diag"
 end
 
-function __init__()
+let
     proj = read(joinpath(dirname(@__DIR__), "Project.toml"), String)
     pkgver = match(r"version = \"(.+)\"", proj)[1]
     push!(HEADERS, "User-Agent" => "Julia v$VERSION (GitForge v$pkgver)")
@@ -31,6 +32,7 @@ The supertype of all other exceptions raised by API functions.
 """
 abstract type ForgeError <: Exception end
 
+Base.include_dependency("../Project.toml")
 include("forge.jl")
 include("ratelimits.jl")
 include("request.jl")
