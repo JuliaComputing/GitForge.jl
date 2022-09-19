@@ -1,4 +1,4 @@
-@json_struct struct Tag
+@json struct Tag
     links::NamedTuple
     name::String
     target::Commit

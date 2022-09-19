@@ -1,9 +1,9 @@
-@json_struct struct Author
+@json struct Author
     raw::String
     user::User
 end
 
-@json_struct struct Participant
+@json struct Participant
     user::User
     role::String
     approved::Bool
@@ -11,7 +11,7 @@ end
     participated_on::Date
 end
 
-@json_struct struct Commit
+@json struct Commit
     hash::String
     data::DateTime
     author::Author

@@ -12,10 +12,32 @@ end
 
 """
     @json struct T ... end
+    @json FORGETYPE struct T ... end
 
 Create a type that can be parsed from JSON.
+
+Optionally accept a forge type for struct names that do not follow the ModuleAPI convention
 """
 macro json(def::Expr)
+    forge = try
+        getfield(__module__, Symbol(string(nameof(__module__)) * "API"))
+    catch
+        throw("No forge struct named $forge. Make one or pass $(__module__)'s forge struct to @json $(def.args[2])")
+    end
+    json(forge, def)
+end
+
+macro json(forgesym::Symbol, def::Expr)
+    forge = try
+        getfield(__module__, forgesym)
+    catch
+        throw("No struct named $forgesym, pass a valid API to @json $(def.args[2])")
+    end
+    !(forge <: GitForge.ForgeType) && throw("$forge is not a ForgeType, pass a valid API to @json $(def.args[2])")
+    json(forge, def)
+end
+
+function json(forge::Type, def::Expr)
     # TODO: This doesn't work for parametric types or types with supertypes.
     T = esc(def.args[2])
     renames = Tuple{Symbol, Symbol}[]
@@ -45,7 +67,9 @@ macro json(def::Expr)
     # Make the type a subtype of `ForgeType`.
     def.args[2] = :($T <: ForgeType)
 
-    # TODO: Add a field for unhandled keys.
+    # Add a field for unhandled keys.
+    push!(def.args[3].args, :(_extras::NamedTuple))
+    push!(names, :_extras)
 
     # Document the struct.
     push!(code, :(Base.@__doc__ $def))
@@ -57,5 +81,32 @@ macro json(def::Expr)
     # Set up field renames.
     push!(code, :(StructTypes.names(::Type{$T}) = $(tuple(renames...))))
 
+    # define forgeof(TYPE) = ModuleAPI (or the given forge struct)
+    push!(code, :(GitForge.forgeof(::Type{$T}) = $forge))
+
     return Expr(:block, code...)
+end
+
+macro forge(f)
+    forge = esc(f)
+    result = quote end
+    code = result.args
+    fmt = try
+        getfield(__module__, :DEFAULT_DATEFORMAT)
+    catch
+    end
+    fmt !== nothing && push!(
+        code,
+        :(
+            function GitForge.constructfield(::GitForge.ForgeContext{$forge}, f, ::Type{Union{Date, Nothing}}, str::AbstractString)
+                Date(str, $fmt)
+            end
+        ),
+        :(
+            function GitForge.constructfield(::GitForge.ForgeContext{$forge}, f, ::Type{Union{DateTime, Nothing}}, str::AbstractString)
+                DateTime(str, $fmt)
+            end
+        ),
+    )
+    result
 end

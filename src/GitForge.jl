@@ -8,7 +8,8 @@ using Dates: Period, UTC, now
 using HTTP: HTTP
 using UUIDs: UUID
 using JSON3: JSON3
-using StructTypes: StructTypes, UnorderedStruct
+using StructTypes: StructTypes, UnorderedStruct, DictType
+import StructTypes: construct, constructfrom
 
 const AStr = AbstractString
 const HEADERS = ["Content-Type" => "application/json"]

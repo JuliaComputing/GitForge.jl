@@ -1,6 +1,6 @@
 module GitLab
 
-import ..GitForge: endpoint, into, postprocessor
+import ..GitForge: endpoint, into, postprocessor, @forge
 
 using ..GitForge
 using ..GitForge:
@@ -92,6 +92,7 @@ struct GitLabAPI <: Forge
         return new(token, url, has_rate_limits, on_rate_limit, RateLimiter())
     end
 end
+@forge GitLabAPI
 
 GitForge.base_url(g::GitLabAPI) = g.url
 GitForge.request_headers(g::GitLabAPI, ::Function) = [HEADERS; auth_headers(g.token)]

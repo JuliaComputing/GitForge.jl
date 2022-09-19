@@ -1,4 +1,4 @@
-@json_struct struct User
+@json struct User
     account_id::String
     account_status::String
     created_on::DateTime
@@ -14,7 +14,7 @@
     website::String
 end
 
-@json_struct struct WorkspaceMembership
+@json struct WorkspaceMembership
     links::NamedTuple
     user::User
 end
@@ -28,10 +28,15 @@ endpoint(::BitbucketAPI, ::typeof(get_user), name::AStr) =
              )
 @not_implemented(::BitbucketAPI, ::typeof(get_user), ::UUID)
 postprocessor(::BitbucketAPI, ::typeof(get_user)) = DoSomething() do resp
-    if match(r".*/workspaces/", resp.request.target) !== nothing
-        StructTypes.constructfrom(Page{get_user, WorkspaceMembership}, JSON2.read(String(resp.body))).values[1].user
-    else
-        StructTypes.constructfrom(User, JSON2.read(String(resp.body)))
+    try
+        if match(r".*/workspaces/", resp.request.target) !== nothing
+            JSON3.read(String(resp.body), Page{get_user, WorkspaceMembership}).values[1].user
+        else
+            JSON3.read(String(resp.body), User)
+        end
+    catch err
+        @error "Error converting $(String(resp.body))" exception=(err,catch_backtrace())
+        rethrow(err)
     end
 end
 into(::BitbucketAPI, ::typeof(get_user)) = User

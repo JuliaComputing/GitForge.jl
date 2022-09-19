@@ -1,4 +1,4 @@
-@kwdef struct Page{OP, T}
+@kwdef struct Page{OP, T} <: GitForge.ForgeType
     size::Int
     page::Int
     pagelen::Int
@@ -6,7 +6,6 @@
     values::Vector{T}
     _extras::NamedTuple
 end
-@struct_def Page
 
 struct BBPaginator{FRG, P}
     api::FRG

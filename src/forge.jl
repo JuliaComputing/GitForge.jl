@@ -24,7 +24,51 @@ abstract type Forge end
 
 abstract type ForgeType end
 
-StructTypes.StructType(::Type{<:ForgeType}) = UnorderedStruct()
+forgeof(::Type) = Nothing
+
+struct ForgeContext{Forge, Type} end
+
+StructTypes.StructType(::Type{<:ForgeType}) = DictType()
+
+function construct(::Type{T}, dict::Dict; kw...) where {T <: ForgeType}
+    ctx = ForgeContext{forgeof(T), T}()
+    T(;
+         (k=> try
+              GitForge.constructfield(ctx, k, fieldtype(T, k), get(dict, k, nothing))
+          catch
+              throw(ForgeAPIError("Error constructing field $T.$k from $(get(dict, k, nothing))"))
+          end
+          for k in fieldnames(T) if haskey(dict, k))...,
+      _extras = (; kw..., (k=> v for (k, v) in dict if !hasfield(T, k))...),
+      )
+end
+
+showfield(type, name) = "$(parentmodule(type)).$(nameof(type)).$name"
+
+# all fields should be assingable to nothing because of the @json macro
+constructfield(::ForgeContext, field, ::Type, ::Nothing) = constructfrom(Nothing, nothing)
+
+## handle Date strings properly and convert ordinary dicts to symbol dicts
+constructfield(::ForgeContext{FORGE, OWNER}, field, FT::Type, val) where {FORGE, OWNER} = try
+    constructfrom(FT, val)
+catch err
+    @error "Could not construct $(showfield(OWNER, field))::$FT from value $v" exception=(err,catch_backtrace())
+    rethrow(err)
+end
+    
+# convert Dict keys to Symbols where appropriate
+constructfield(::ForgeContext, field, FT::Type, dict::Dict{Symbol}) = constructfrom(FT, dict)
+
+# convert dicts that are not known to be keyed with symbols
+constructfield(::ForgeContext, field, FT::Type, dict::Dict) =
+    NamedTuple <: FT ?
+    (; (Symbol(k) => v for (k,v) in dict)...) :
+    constructfrom(FT, Dict(Symbol(k) => v for (k,v) in dict))
+
+StructTypes.keyvaluepairs(obj::T) where {T <: ForgeType} = [
+    [k=>getfield(obj, k) for k in fieldnames(T) if k != :_extras]...,
+    pairs(obj._extras)...,
+]
 
 function StructTypes.keywordargs(::Type{T}) where T <: ForgeType
     M = parentmodule(T)

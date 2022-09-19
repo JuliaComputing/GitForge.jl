@@ -1,22 +1,22 @@
-@json_struct struct Project
+@json struct Project
     key::String
     links::NamedTuple
     name::String
     uuid::UUID
 end
 
-@json_struct struct Branch
+@json struct Branch
     name::String
 end
 
-@json_struct struct Workspace
+@json struct Workspace
     links::NamedTuple
     name::String
     slug::String
     uuid::UUID
 end
 
-@json_struct mutable struct Repo
+@json mutable struct Repo
     created_on::DateTime
     description::String
     fork_policy::String
@@ -56,7 +56,7 @@ into(::BitbucketAPI, ::typeof(create_repo)) = Repo
 
 function is_bitbucket_collaborator(resp::HTTP.Response)
     if HTTP.status(resp) == 200
-        d = JSON2.read(String(HTTP.body(resp)), Dict)
+        d = JSON3.read(String(HTTP.body(resp)), Dict)
         return haskey(d, "values") && length(d["values"]) > 0 &&
             d["values"][1]["permissions"] in ["write" "admin"]
     end

@@ -1,14 +1,14 @@
-@json_struct struct PullRequestBranch
+@json struct PullRequestBranch
     default_merge_strategy::String
     merge_strategies::Vector{String}
     name::String
 end
 
-@json_struct struct PullRequestCommit
+@json struct PullRequestCommit
     hash::String
 end
 
-@json_struct struct PullRequestEndpoint
+@json struct PullRequestEndpoint
     branch::Branch
     commit::PullRequestCommit
     repository::Repo
@@ -20,13 +20,13 @@ end
 title, description, and reason are Dicts like:
 Dict("raw"=> "<string>", "markup"=> "<string>", "html"=> "<string>")
 """
-@json_struct struct RenderedPullRequestMarkup
+@json struct RenderedPullRequestMarkup
     description::Dict{String, Any}
     reason::Dict{String, Any}
     title::Dict{String, Any}
 end
 
-@json_struct struct PullRequest
+@json struct PullRequest
     author::User
     close_source_branch::Bool
     closed_by::Union{User, Nothing}

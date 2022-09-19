@@ -2,7 +2,7 @@
 
 module GitHub
 
-import ..GitForge: endpoint, into, postprocessor
+import ..GitForge: endpoint, into, postprocessor, @forge
 
 using ..GitForge
 using ..GitForge:
@@ -93,6 +93,7 @@ struct GitHubAPI <: Forge
         return new(token, url, has_rate_limits, on_rate_limit, RateLimiter(), RateLimiter())
     end
 end
+@forge GitHubAPI
 
 GitForge.base_url(g::GitHubAPI) = g.url
 GitForge.request_headers(g::GitHubAPI, ::Function) = [HEADERS; auth_headers(g.token)]
