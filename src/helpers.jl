@@ -87,6 +87,14 @@ function json(forge::Type, def::Expr)
     return Expr(:block, code...)
 end
 
+"""
+    @forge API-STRUCT-NAME
+
+if you have defined DEFAULT_DATEFORMAT, put this after the API struct definition
+to handle date parsing.
+
+Other automatic parsing methods can be added here.
+"""
 macro forge(f)
     forge = esc(f)
     result = quote end
