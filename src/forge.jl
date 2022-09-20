@@ -48,7 +48,13 @@ showfield(type, name) = "$(parentmodule(type)).$(nameof(type)).$name"
 # all fields should be assingable to nothing because of the @json macro
 constructfield(::ForgeContext, field, ::Type, ::Nothing) = constructfrom(Nothing, nothing)
 
-## handle Date strings properly and convert ordinary dicts to symbol dicts
+"""
+    constructfield(::::ForgeContext{FORGE, OWNER}, field, FT::Type, val)
+
+Override this to handle converting fields for your forge.
+
+This allows forges to handle their own date and UUID formats
+"""
 constructfield(::ForgeContext{FORGE, OWNER}, field, FT::Type, val) where {FORGE, OWNER} = try
     constructfrom(FT, val)
 catch err
@@ -81,6 +87,8 @@ end
 
 """
 Override this for custom JSON3 encodings for a particular forge or forge type
+
+This allows forges to encode their own dates and UUIDs properly.
 
 This should return the new buf, pos, len
 """
