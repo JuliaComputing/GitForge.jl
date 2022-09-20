@@ -80,6 +80,35 @@ function StructTypes.keywordargs(::Type{T}) where T <: ForgeType
 end
 
 """
+Override this for custom JSON3 encodings for a particular forge or forge type
+"""
+JSON3.write(::ForgeContext, buf, pos, len, x; kw...) =
+    JSON3.write(StructType(x), buf, pos, len, x; kw...)
+
+JSON3.write(::StructTypes.DictType, buf, pos, len, v::T; kw...) where {T <: ForgeType} =
+    JSON3.write(ForgeContext{forgeof(T), T}(), buf, pos, len, v; kw...)
+
+# modified from JSON3.write(::DictType, buf, pos, len, x::T; kw...)
+function JSON3.write(ctx::ForgeContext{FORGE, T}, buf, pos, len, x::T; kw...) where {FORGE, T}
+    @writechar '{'
+    pairs = StructTypes.keyvaluepairs(x)
+
+    next = iterate(pairs)
+    while next !== nothing
+        (k, v), state = next
+
+        buf, pos, len = JSON3.write(StringType(), buf, pos, len, Base.string(k))
+        @writechar ':'
+        buf, pos, len = JSON3.write(ctx, buf, pos, len, v; kw...)
+
+        next = iterate(pairs, state)
+        next === nothing || @writechar ','
+    end
+    @writechar '}'
+    return buf, pos, len
+end
+
+"""
     Endpoint(
         method::Symbol,
         url::$AStr;

@@ -8,7 +8,7 @@ module Bitbucket
 import ..GitForge: endpoint, into, postprocessor, ForgeAPIError, constructfield, @forge, ForgeContext
 import ..GitForge.GitHub: ismemberorcollaborator
 import Base.@kwdef, Base.Meta.quot
-import StructTypes: Struct, UnorderedStruct, construct, constructfrom, StructType
+import StructTypes: Struct, UnorderedStruct, construct, constructfrom, StructType, StringType
 
 using ..GitForge
 using ..GitForge:
@@ -75,6 +75,9 @@ mutable struct BitbucketAPI <: Forge
     end
 end
 @forge BitbucketAPI
+
+JSON3.write(::ForgeContext{BitbucketAPI}, buf, pos, len, uuid::UUID; kw...) =
+    JSON3.write(StringType(), buf, pos, len, "{$uuid}")
 
 GitForge.base_url(b::BitbucketAPI) = b.url
 GitForge.request_headers(b::BitbucketAPI, ::Function) = [HEADERS; auth_headers(b.token)]
