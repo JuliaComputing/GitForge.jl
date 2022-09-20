@@ -47,11 +47,13 @@ endpoint(api::BitbucketAPI, ::typeof(get_repo), workspace::AStr, repo::AStr) =
     Endpoint(:GET, "/repositories/$workspace/$repo")
 @not_implemented(::BitbucketAPI, ::typeof(get_repo), ::String, ::String, ::String)
 into(::BitbucketAPI, ::typeof(get_repo)) = Repo
+@not_implemented(::BitbucketAPI, ::typeof(get_repo), ::String)
 
 endpoint(::BitbucketAPI, ::typeof(create_repo), workspace::AStr, repo::AStr) =
     Endpoint(:POST, "/repositories/$workspace/$repo")
 @not_implemented(::BitbucketAPI, ::typeof(create_repo), org::AStr)
 @not_implemented(::BitbucketAPI, ::typeof(create_repo), ::UUID)
+@not_implemented(::BitbucketAPI, ::typeof(create_repo),)
 into(::BitbucketAPI, ::typeof(create_repo)) = Repo
 
 function is_bitbucket_collaborator(resp::HTTP.Response)

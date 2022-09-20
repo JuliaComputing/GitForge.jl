@@ -43,6 +43,7 @@ into(::BitbucketAPI, ::typeof(get_user)) = User
 
 endpoint(api::BitbucketAPI, ::typeof(get_users), workspace::AStr) = Endpoint(:GET, "/workspaces/$workspace/members")
 into(::BitbucketAPI, ::typeof(get_users)) = Page{get_users, User}
+@not_implemented(api::BitbucketAPI, ::typeof(get_users))
 
 @not_implemented(api::BitbucketAPI, ::typeof(update_user))
 @not_implemented(api::BitbucketAPI, ::typeof(update_user), id::UUID)

@@ -81,6 +81,8 @@ end
 
 """
 Override this for custom JSON3 encodings for a particular forge or forge type
+
+This should return the new buf, pos, len
 """
 JSON3.write(::ForgeContext, buf, pos, len, x; kw...) =
     JSON3.write(StructType(x), buf, pos, len, x; kw...)

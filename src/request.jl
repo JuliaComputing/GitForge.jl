@@ -136,9 +136,9 @@ function request(
     resp = try
         HTTP.request(
             ep.method, url, headers, body;
+            verbose = diag ? 2 : 0,
             query=query, opts...,
             status_exception=false, # We handle status exceptions ourselvse.
-            verbose = diag ? 2 : 0,
         )
     catch e
         rethrow(HTTPError(e, stacktrace(catch_backtrace())))
