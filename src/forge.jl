@@ -36,7 +36,7 @@ function construct(::Type{T}, dict::Dict; kw...) where {T <: ForgeType}
          (k=> try
               GitForge.constructfield(ctx, k, fieldtype(T, k), get(dict, k, nothing))
           catch
-              throw(ForgeAPIError("Error constructing field $T.$k from $(get(dict, k, nothing))"))
+              throw(ForgeAPIError("Error constructing field $T.$k from $(get(dict, k, nothing))\nAll data: $dict"))
           end
           for k in fieldnames(T) if haskey(dict, k))...,
       _extras = (; kw..., (k=> v for (k, v) in dict if !hasfield(T, k))...),

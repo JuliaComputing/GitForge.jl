@@ -39,6 +39,6 @@ function Base.iterate(pgn::BBPaginator{BitbucketAPI, P}, (p, offset)::Tuple{P, I
         p2 = postprocess(postprocessor(api, OP), resp, into(api, OP))
         p2.values[1], (p2, 2)
     catch e
-        rethrow(PostProcessorError(resp, e, stacktrace(catch_backtrace())))
+        rethrow(PostProcessorError(paginate, resp, e, stacktrace(catch_backtrace())))
     end
 end

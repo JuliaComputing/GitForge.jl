@@ -25,6 +25,7 @@ An error encountered during response postprocessing.
 - `stacktrace::StackTrace`
 """
 struct PostProcessorError{E<:Exception} <: ForgeError
+    func
     response::HTTP.Response
     exception::E
     stacktrace::StackTrace
@@ -152,7 +153,7 @@ function request(
     return try
         postprocess(postprocessor(f, fun), resp, into(f, fun)), resp
     catch e
-        rethrow(PostProcessorError(resp, e, stacktrace(catch_backtrace())))
+        rethrow(PostProcessorError(fun, resp, e, stacktrace(catch_backtrace())))
     end
 end
 
