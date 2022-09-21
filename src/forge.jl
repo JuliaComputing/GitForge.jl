@@ -54,6 +54,8 @@ showfield(type, name) = "$(parentmodule(type)).$(nameof(type)).$name"
 Override this with your own FORGE and OWNER to handle converting fields for your forge.
 
 This allows forges to handle their own date and UUID formats, etc.
+
+Note that untyped JSON objects will convert to named tuples.
 """
 constructfield(::ForgeContext{FORGE, OWNER}, field, FT::Type, val) where {FORGE, OWNER} = try
     constructfrom(FT, val)
@@ -76,6 +78,10 @@ constructfield(ctx::ForgeContext, field, ::Type, vec::Vector) where FT =
 # convert dicts recursively
 function constructfield(ctx::ForgeContext, field, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict) where
     {K, V}
+    Dict(construct(K, k) => constructfield(ctx, field, Union{V, Nothing}, v) for (k,v) in dict)
+end
+
+function constructfield(ctx::ForgeContext, field, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict{K2,V2}) where {K, V, K2 <: Union{AbstractString, Symbol}, V2}
     Dict(construct(K, k) => constructfield(ctx, field, Union{V, Nothing}, v) for (k,v) in dict)
 end
 
