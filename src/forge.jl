@@ -48,9 +48,6 @@ end
 
 showfield(type, name) = "$(parentmodule(type)).$(nameof(type)).$name"
 
-# all fields should be assingable to nothing because of the @json macro
-constructfield(::ForgeContext, field, ::Type, ::Nothing) = nothing
-
 """
     constructfield(::::ForgeContext{FORGE, OWNER}, field, FT::Type, val)
 
@@ -65,14 +62,16 @@ catch err
     rethrow(err)
 end
     
+# all fields should be assingable to nothing because of the @json macro
+constructfield(::ForgeContext, field, ::Type, ::Nothing) = nothing
+
 # convert Vectors recursively
 constructfield(ctx::ForgeContext, field, ::Type{Union{Vector{FT}, Nothing}}, vec::Vector) where FT =
     [constructfield(ctx, field, FT, v) for v in vec]
 
-# convert named tuples recursively
-function constructfield(ctx::ForgeContext, field, ::Type{>: NamedTuple}, dict::Dict)
-    (; (Symbol(k) => constructfield(ctx, field, Any, v) for (k,v) in dict)...)
-end
+# convert Vectors recursively
+constructfield(ctx::ForgeContext, field, ::Type, vec::Vector) where FT =
+    [constructfield(ctx, field, Union{Any, Nothing}, v) for v in vec]
 
 # convert dicts recursively
 function constructfield(ctx::ForgeContext, field, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict) where
@@ -80,9 +79,10 @@ function constructfield(ctx::ForgeContext, field, ::Type{Union{Dict{K, V}, Nothi
     Dict(construct(K, k) => constructfield(ctx, field, Union{V, Nothing}, v) for (k,v) in dict)
 end
 
-#function constructfield(ctx::ForgeContext, field, FT::Type, dict::Dict)
-#    constructfrom(FT, Dict(Symbol(k) => constructfield(ctx, field, Any, v) for (k,v) in dict))
-#end
+# convert symbol/string dicts with unassociated types into named tuples
+function constructfield(ctx::ForgeContext, field, FT::Type, dict::Dict{K, V}) where {K <: Union{AbstractString, Symbol}, V}
+    constructfrom(FT, (; (Symbol(k) => constructfield(ctx, field, Union{Any, Nothing}, v) for (k,v) in dict)...))
+end
 
 StructTypes.keyvaluepairs(obj::T) where {T <: ForgeType} = [
     [k=>getfield(obj, k) for k in fieldnames(T) if k != :_extras]...,

@@ -78,8 +78,20 @@ end
 Computes a value to be returned from an HTTP response.
 """
 postprocess(::DoNothing, ::HTTP.Response, ::Type) = nothing
-postprocess(p::JSON, r::HTTP.Response, ::Type{T}) where T =
-    p.f(JSON3.read(IOBuffer(r.body), T))
+function postprocess(p::JSON, r::HTTP.Response, ::Type{T}) where T
+    data = try
+        JSON3.read(IOBuffer(r.body), T)
+    catch err
+        @error "Error converting to type $T from data $(String(r.body))" exception=(err,catch_backtrace())
+        rethrow(err)
+    end
+    try
+        p.f(data)
+    catch err
+        @error "Error processing data $data" exception=(err,catch_backtrace())
+        rethrow(err)
+    end
+end
 postprocess(p::DoSomething, r::HTTP.Response, ::Type) = p.f(r)
 
 # Requests.
