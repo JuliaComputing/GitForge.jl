@@ -30,46 +30,59 @@ struct ForgeContext{Forge, Type} end
 
 StructTypes.StructType(::Type{<:ForgeType}) = DictType()
 
-function construct(::Type{T}, dict::Dict; kw...) where {T <: ForgeType}
+construct(::Type{T}, dict::Dict; kw...) where {T <: ForgeType} =
+    construct(T, Dict(Symbol(k) => v for (k, v) in dict); kw...)
+
+function construct(::Type{T}, dict::Dict{Symbol}; kw...) where {T <: ForgeType}
     ctx = ForgeContext{forgeof(T), T}()
     T(;
-         (k=> try
-              GitForge.constructfield(ctx, k, fieldtype(T, k), get(dict, k, nothing))
-          catch
-              throw(ForgeAPIError("Error constructing field $T.$k from $(get(dict, k, nothing))\nAll data: $dict"))
-          end
-          for k in fieldnames(T) if haskey(dict, k))...,
-      _extras = (; kw..., (k=> v for (k, v) in dict if !hasfield(T, k))...),
+      (k=> try
+           GitForge.constructfield(ctx, k, fieldtype(T, k), get(dict, k, nothing))
+       catch
+           throw(ForgeAPIError("Error constructing field $T.$k from $(get(dict, k, nothing))\nAll data: $dict"))
+       end
+       for k in fieldnames(T))...,
+      _extras = (; kw..., (k => v for (k, v) in dict if !hasfield(T, k))...),
       )
 end
 
 showfield(type, name) = "$(parentmodule(type)).$(nameof(type)).$name"
 
 # all fields should be assingable to nothing because of the @json macro
-constructfield(::ForgeContext, field, ::Type, ::Nothing) = constructfrom(Nothing, nothing)
+constructfield(::ForgeContext, field, ::Type, ::Nothing) = nothing
 
 """
     constructfield(::::ForgeContext{FORGE, OWNER}, field, FT::Type, val)
 
-Override this to handle converting fields for your forge.
+Override this with your own FORGE and OWNER to handle converting fields for your forge.
 
-This allows forges to handle their own date and UUID formats
+This allows forges to handle their own date and UUID formats, etc.
 """
 constructfield(::ForgeContext{FORGE, OWNER}, field, FT::Type, val) where {FORGE, OWNER} = try
     constructfrom(FT, val)
 catch err
-    @error "Could not construct $(showfield(OWNER, field))::$FT from value $v" exception=(err,catch_backtrace())
+    @error "Could not construct $(showfield(OWNER, field))::$FT from value $val" exception=(err,catch_backtrace())
     rethrow(err)
 end
     
-# convert Dict keys to Symbols where appropriate
-constructfield(::ForgeContext, field, FT::Type, dict::Dict{Symbol}) = constructfrom(FT, dict)
+# convert Vectors recursively
+constructfield(ctx::ForgeContext, field, ::Type{Union{Vector{FT}, Nothing}}, vec::Vector) where FT =
+    [constructfield(ctx, field, FT, v) for v in vec]
 
-# convert dicts that are not known to be keyed with symbols
-constructfield(::ForgeContext, field, FT::Type, dict::Dict) =
-    NamedTuple <: FT ?
-    (; (Symbol(k) => v for (k,v) in dict)...) :
-    constructfrom(FT, Dict(Symbol(k) => v for (k,v) in dict))
+# convert named tuples recursively
+function constructfield(ctx::ForgeContext, field, ::Type{>: NamedTuple}, dict::Dict)
+    (; (Symbol(k) => constructfield(ctx, field, Any, v) for (k,v) in dict)...)
+end
+
+# convert dicts recursively
+function constructfield(ctx::ForgeContext, field, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict) where
+    {K, V}
+    Dict(construct(K, k) => constructfield(ctx, field, Union{V, Nothing}, v) for (k,v) in dict)
+end
+
+#function constructfield(ctx::ForgeContext, field, FT::Type, dict::Dict)
+#    constructfrom(FT, Dict(Symbol(k) => constructfield(ctx, field, Any, v) for (k,v) in dict))
+#end
 
 StructTypes.keyvaluepairs(obj::T) where {T <: ForgeType} = [
     [k=>getfield(obj, k) for k in fieldnames(T) if k != :_extras]...,
