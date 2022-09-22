@@ -52,13 +52,13 @@ function json(forge::Type, def::Expr)
             # Make the field nullable.
             field.args[2] = :(Union{$(esc(field.args[2])), Nothing})
         elseif field.head === :call && field.args[1] === :(=>)
-            push!(names, field.args[2])
             # Convert from => to::F to to::F, and record the old name.
             from = field.args[2]
             to, F = field.args[3].args
             field.head = :(::)
             field.args = [to, :(Union{$(esc(F)), Nothing})]
             push!(renames, (to, from))
+            push!(names, to)
         else
             @warn "Invalid field expression $field"
         end
