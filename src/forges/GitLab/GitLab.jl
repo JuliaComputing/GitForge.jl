@@ -1,6 +1,6 @@
 module GitLab
 
-import ..GitForge: endpoint, into, postprocessor, @forge
+import ..GitForge: endpoint, into, postprocessor, @forge, ForgeContext, constructfield
 
 using ..GitForge
 using ..GitForge:
@@ -26,7 +26,6 @@ using TimeZones: ZonedDateTime
 export GitLabAPI, NoToken, OAuth2Token, PersonalAccessToken
 
 const DEFAULT_URL = "https://gitlab.com/api/v4"
-const DEFAULT_DATEFORMAT = dateformat"y-m-dTH:M:S.s\Z"
 
 abstract type AbstractToken end
 
@@ -93,6 +92,12 @@ struct GitLabAPI <: Forge
     end
 end
 @forge GitLabAPI
+
+constructfield(::ForgeContext{GitLabAPI}, f, ::Type{Union{Date, Nothing}}, v::AbstractString) =
+    Date(ZonedDateTime(v))
+
+constructfield(::ForgeContext{GitLabAPI}, f, ::Type{Union{DateTime, Nothing}}, v::AbstractString) =
+    DateTime(ZonedDateTime(v))
 
 GitForge.base_url(g::GitLabAPI) = g.url
 GitForge.request_headers(g::GitLabAPI, ::Function) = [HEADERS; auth_headers(g.token)]

@@ -60,7 +60,7 @@ Note that untyped JSON objects will convert to named tuples.
 constructfield(::ForgeContext{FORGE, OWNER}, field, FT::Type, val) where {FORGE, OWNER} = try
     constructfrom(FT, val)
 catch err
-    @error "Could not construct $(showfield(OWNER, field))::$FT from value $val" exception=(err,catch_backtrace())
+    @error "Could not construct $(showfield(OWNER, field))::$FT from value $(repr(val))" exception=(err,catch_backtrace())
     rethrow(err)
 end
     
