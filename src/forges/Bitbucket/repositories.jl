@@ -16,7 +16,7 @@ end
     uuid::UUID
 end
 
-@json mutable struct Repo
+@json struct Repo
     created_on::DateTime
     description::String
     fork_policy::String

@@ -26,7 +26,11 @@ abstract type ForgeType end
 
 forgeof(::Type) = Nothing
 
-struct ForgeContext{Forge, Type} end
+struct FieldContext{Forge, Type, Field}
+    FieldContext{Forge}() where {Forge} = new{Forge, nothing, nothing}()
+    FieldContext{Forge, Type}() where {Forge, Type} = new{Forge, Type, nothing}()
+    FieldContext{Forge, Type, Field}() where {Forge, Type, Field} = new{Forge, Type, Field}()
+end
 
 StructTypes.StructType(::Type{<:ForgeType}) = DictType()
 
@@ -34,12 +38,12 @@ construct(::Type{T}, dict::Dict; kw...) where {T <: ForgeType} =
     construct(T, Dict(Symbol(k) => v for (k, v) in dict); kw...)
 
 function construct(::Type{T}, dict::Dict{Symbol}; kw...) where {T <: ForgeType}
-    ctx = ForgeContext{forgeof(T), T}()
+    forge = forgeof(T)
     T(;
       (k=> try
-           GitForge.constructfield(ctx, k, fieldtype(T, k), get(dict, k, nothing))
+           GitForge.constructfield(FieldContext{forge, T, k}(), fieldtype(T, k), get(dict, k, nothing))
        catch
-           throw(ForgeAPIError("Error constructing field $T.$k from $(get(dict, k, nothing))\nAll data: $dict"))
+           throw(ForgeAPIError("Error constructing field $T.$k from $(repr(get(dict, k, nothing)))\nAll data: $dict"))
        end
        for k in fieldnames(T))...,
       _extras = (; kw..., (k => v for (k, v) in dict if !hasfield(T, k))...),
@@ -49,45 +53,47 @@ end
 showfield(type, name) = "$(parentmodule(type)).$(nameof(type)).$name"
 
 """
-    constructfield(::::ForgeContext{FORGE, OWNER}, field, FT::Type, val)
+    constructfield(::::FieldContext{FORGE, OWNER, FIELD}, FT::Type, val)
 
-Override this with your own FORGE and OWNER to handle converting fields for your forge.
+Override this with your own FORGE, FORGE and OWNER, or FORGE, OWNER,
+and FIELD to handle converting fields and types for your forge.
 
 This allows forges to handle their own date and UUID formats, etc.
 
 Note that untyped JSON objects will convert to named tuples.
 """
-constructfield(::ForgeContext{FORGE, OWNER}, field, FT::Type, val) where {FORGE, OWNER} = try
+constructfield(::FieldContext{FORGE, OWNER, FIELD}, FT::Type, val) where {FORGE, OWNER, FIELD} = try
     constructfrom(FT, val)
 catch err
-    @error "Could not construct $(showfield(OWNER, field))::$FT from value $(repr(val))" exception=(err,catch_backtrace())
+    @error "Could not construct $(showfield(OWNER, FIELD))::$FT from value $(repr(val))" exception=(err,catch_backtrace())
     rethrow(err)
 end
     
 # all fields should be assingable to nothing because of the @json macro
-constructfield(::ForgeContext, field, ::Type, ::Nothing) = nothing
+constructfield(::FieldContext, ::Type, ::Nothing) = nothing
 
 # convert Vectors recursively
-constructfield(ctx::ForgeContext, field, ::Type{Union{Vector{FT}, Nothing}}, vec::Vector) where FT =
-    [constructfield(ctx, field, FT, v) for v in vec]
+constructfield(ctx::FieldContext, ::Type{Union{Vector{FT}, Nothing}}, vec::Vector) where FT =
+    [constructfield(ctx, FT, v) for v in vec]
 
 # convert Vectors recursively
-constructfield(ctx::ForgeContext, field, ::Type, vec::Vector) where FT =
-    [constructfield(ctx, field, Union{Any, Nothing}, v) for v in vec]
+constructfield(ctx::FieldContext, ::Type, vec::Vector) where FT =
+    [constructfield(ctx, Union{Any, Nothing}, v) for v in vec]
 
 # convert dicts recursively
-function constructfield(ctx::ForgeContext, field, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict) where
+function constructfield(ctx::FieldContext, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict) where
     {K, V}
-    Dict(construct(K, k) => constructfield(ctx, field, Union{V, Nothing}, v) for (k,v) in dict)
+    Dict(construct(K, k) => constructfield(ctx, Union{V, Nothing}, v) for (k,v) in dict)
 end
 
-function constructfield(ctx::ForgeContext, field, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict{K2,V2}) where {K, V, K2 <: Union{AbstractString, Symbol}, V2}
-    Dict(construct(K, k) => constructfield(ctx, field, Union{V, Nothing}, v) for (k,v) in dict)
+function constructfield(ctx::FieldContext, ::Type{Union{Dict{K, V}, Nothing}}, dict::Dict{K2,V2}) where {K, V, K2 <: Union{AbstractString, Symbol}, V2}
+    Dict(construct(K, k) => constructfield(ctx, Union{V, Nothing}, v) for (k,v) in dict)
 end
 
 # convert symbol/string dicts with unassociated types into named tuples
-function constructfield(ctx::ForgeContext, field, FT::Type, dict::Dict{K, V}) where {K <: Union{AbstractString, Symbol}, V}
-    constructfrom(FT, (; (Symbol(k) => constructfield(ctx, field, Union{Any, Nothing}, v) for (k,v) in dict)...))
+function constructfield(ctx::FieldContext, FT::Type{Union{NamedTuple, Nothing}}, dict::Dict{K, V}) where {K <: Union{AbstractString, Symbol}, V}
+    constructfrom(FT, (; (Symbol(k) => constructfield(ctx, Union{Any, Nothing}, v)
+                                         for (k, v) in dict)...))
 end
 
 StructTypes.keyvaluepairs(obj::T) where {T <: ForgeType} = [
@@ -104,35 +110,46 @@ function StructTypes.keywordargs(::Type{T}) where T <: ForgeType
     end
 end
 
+JSON3.write(::StructTypes.DictType, buf, pos, len, v::T; kw...) where {T <: ForgeType} =
+    JSON3.write(FieldContext{forgeof(T), T}(), buf, pos, len, v; kw...)
+
 """
-Override this for custom JSON3 encodings for a particular forge or forge type
+    write(::FieldContext{FORGE, TYPE, FIELD}, buf, pos, len, x; kw...)
+
+Override this for custom JSON3 encodings for a particular forge, forge
+and type, or forge, type, and field.
 
 This allows forges to encode their own dates and UUIDs properly.
 
-This should return the new buf, pos, len
+Returns the new buf, pos, len
 """
-JSON3.write(::ForgeContext, buf, pos, len, x; kw...) =
-    JSON3.write(StructType(x), buf, pos, len, x; kw...)
-
-JSON3.write(::StructTypes.DictType, buf, pos, len, v::T; kw...) where {T <: ForgeType} =
-    JSON3.write(ForgeContext{forgeof(T), T}(), buf, pos, len, v; kw...)
+write(::FieldContext, buf, pos, len, x; kw...) =
+     JSON3.write(StructType(x), buf, pos, len, x; kw...)
 
 # modified from JSON3.write(::DictType, buf, pos, len, x::T; kw...)
-function JSON3.write(ctx::ForgeContext{FORGE, T}, buf, pos, len, x::T; kw...) where {FORGE, T}
+function JSON3.write(ctx::FieldContext{FORGE, T}, buf, pos, len, x::T; kw...) where {FORGE, T}
     @writechar '{'
-    pairs = StructTypes.keyvaluepairs(x)
 
-    next = iterate(pairs)
-    while next !== nothing
-        (k, v), state = next
-
+    first = true
+    for (k, v) in StructTypes.keyvaluepairs(x)
+        if first
+            first = false
+        else
+            @writechar ','
+        end
+        k == :_extras && continue
         buf, pos, len = JSON3.write(StringType(), buf, pos, len, Base.string(k))
         @writechar ':'
-        buf, pos, len = JSON3.write(ctx, buf, pos, len, v; kw...)
-
-        next = iterate(pairs, state)
-        next === nothing || @writechar ','
+        buf, pos, len = write(FieldContext{FORGE, T, k}(), buf, pos, len, v; kw...)
     end
+
+    for (ek, ev) in pairs(x._extras)
+        @writechar ','
+        buf, pos, len = JSON3.write(StringType(), buf, pos, len, Base.string(ek))
+        @writechar ':'
+        buf, pos, len = write(FieldContext{FORGE, T, :_extras}(), buf, pos, len, ev; kw...)
+    end
+
     @writechar '}'
     return buf, pos, len
 end

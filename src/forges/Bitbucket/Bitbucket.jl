@@ -5,7 +5,8 @@ Implements read-only access
 """
 module Bitbucket
 
-import ..GitForge: endpoint, into, postprocessor, ForgeAPIError, constructfield, @forge, ForgeContext
+import ..GitForge: endpoint, into, postprocessor, ForgeAPIError, constructfield, @forge
+import ..GitForge: FieldContext, write
 import ..GitForge.GitHub: ismemberorcollaborator
 import Base.@kwdef, Base.Meta.quot
 import StructTypes: Struct, UnorderedStruct, construct, constructfrom, StructType, StringType
@@ -23,7 +24,9 @@ using ..GitForge:
     RateLimiter,
     HEADERS,
     ORL_THROW,
-    @not_implemented
+    @not_implemented,
+    mungetime
+
 using ..GitForge.GitHub: NoToken, JWT, AbstractToken
 using Dates, TimeZones, HTTP, UUIDs, StructTypes
 using Dates: Date, DateTime
@@ -33,6 +36,9 @@ export BitbucketAPI, Token, JWT
 # using a const here in order to export it
 const Token = GitForge.GitHub.Token
 const DEFAULT_URL = "https://api.bitbucket.org/2.0"
+const DEFAULT_TIME_IN_NO_MILLIS = dateformat"yyyy-mm-ddTHH:MM:SSz"
+const DEFAULT_TIME_OUT_NO_MILLIS = dateformat"yyyy-mm-ddTHH:MM:SS+00:00"
+const DEFAULT_TIME_OUT_MILLIS = dateformat"yyyy-mm-ddTHH:MM:SS.sss+00:00"
 
 auth_headers(::NoToken) = []
 auth_headers(t::Token) = ["Authorization" => "Basic $(t.token)"]
@@ -76,8 +82,20 @@ mutable struct BitbucketAPI <: Forge
 end
 @forge BitbucketAPI
 
-JSON3.write(::ForgeContext{BitbucketAPI}, buf, pos, len, uuid::UUID; kw...) =
+constructfield(::FieldContext{BitbucketAPI}, ::Type{Union{UUID, Nothing}}, str::AbstractString) =
+    UUID(str[2:end-1])
+
+constructfield(::FieldContext{BitbucketAPI}, ::Type{Union{Date, Nothing}}, v::AbstractString) =
+    Date(ZonedDateTime(mungetime(v)), UTC)
+
+constructfield(::FieldContext{BitbucketAPI}, ::Type{Union{DateTime, Nothing}}, v::AbstractString) =
+    DateTime(ZonedDateTime(mungetime(v)), UTC)
+
+write(::FieldContext{BitbucketAPI}, buf, pos, len, uuid::UUID; kw...) =
     JSON3.write(StringType(), buf, pos, len, "{$uuid}")
+
+write(::FieldContext{BitbucketAPI}, buf, pos, len, time::DateTime; kw...) =
+    JSON3.write(StringType(), buf, pos, len, Dates.format(time, DEFAULT_TIME_OUT_MILLIS))
 
 GitForge.base_url(b::BitbucketAPI) = b.url
 GitForge.request_headers(b::BitbucketAPI, ::Function) = [HEADERS; auth_headers(b.token)]
@@ -89,15 +107,6 @@ GitForge.rate_limit_wait(b::BitbucketAPI, ::Function) = GitForge.rate_limit_wait
 GitForge.rate_limit_period(b::BitbucketAPI, ::Function) = GitForge.rate_limit_period(b.rl_general)
 GitForge.rate_limit_update!(b::BitbucketAPI, ::Function, r::HTTP.Response) =
     GitForge.rate_limit_update!(b.rl_general, r)
-
-constructfield(::ForgeContext{BitbucketAPI}, f, ::Type{Union{UUID, Nothing}}, str::AbstractString) =
-    UUID(str[2:end-1])
-
-constructfield(::ForgeContext{BitbucketAPI}, f, ::Type{Union{Date, Nothing}}, v::AbstractString) =
-    Date(ZonedDateTime(replace(v, r"(\.[0-9]{3})([0-9]*)\+" => s"\1+")))
-
-constructfield(::ForgeContext{BitbucketAPI}, f, ::Type{Union{DateTime, Nothing}}, v::AbstractString) =
-    DateTime(ZonedDateTime(replace(v, r"(\.[0-9]{3})([0-9]*)\+" => s"\1+")))
 
 include("pagination.jl")
 include("users.jl")

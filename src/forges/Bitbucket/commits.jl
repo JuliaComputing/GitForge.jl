@@ -13,7 +13,7 @@ end
 
 @json struct Commit
     hash::String
-    data::DateTime
+    date::DateTime
     author::Author
     message::String
     summary::Dict{String, Any}

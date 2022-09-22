@@ -43,8 +43,6 @@ function json(forge::Type, def::Expr)
     renames = Tuple{Symbol, Symbol}[]
     names = Symbol[]
 
-    code = Expr[]
-
     for field in def.args[3].args
         field isa Expr || continue
         if field.head === :(::)
@@ -69,22 +67,34 @@ function json(forge::Type, def::Expr)
 
     # Add a field for unhandled keys.
     push!(def.args[3].args, :(_extras::NamedTuple))
-    push!(names, :_extras)
 
-    # Document the struct.
-    push!(code, :(Base.@__doc__ $def))
-
-    # Create a keyword constructor.
+    # keywords for the keyword constructor.
     kws = map(name -> Expr(:kw, name, :nothing), names)
-    push!(code, :($T(; $(kws...)) = $T($(names...))))
+    extras = esc(:_extras)
 
-    # Set up field renames.
-    push!(code, :(StructTypes.names(::Type{$T}) = $(tuple(renames...))))
+    #pretty equality args
+    a = esc(:a)
+    b = esc(:b)
+    eq = esc(:(Base.:(==)))
 
-    # define forgeof(TYPE) = ModuleAPI (or the given forge struct)
-    push!(code, :(GitForge.forgeof(::Type{$T}) = $forge))
+    quote
+        Base.@__doc__ $def
+    
+        # sort extras so they can compare for equality
+        $T(; $(kws...), $extras) =
+            $T($(names...), (; sort!([pairs($extras)...], by = first)...))
 
-    return Expr(:block, code...)
+        # equality
+        function $eq($a::$T, $b::$T)
+            $(foldr((x, y)-> :($x && $y), [:($a.$n == $b.$n) for n in [names..., :_extras]]))
+        end
+
+        # Set up field renames.
+        StructTypes.names(::Type{$T}) = $(tuple(renames...))
+
+        # define forgeof(TYPE) = ModuleAPI (or the given forge struct)
+        GitForge.forgeof(::Type{$T}) = $forge
+    end
 end
 
 """
@@ -103,18 +113,22 @@ macro forge(f)
         getfield(__module__, :DEFAULT_DATEFORMAT)
     catch
     end
-    fmt !== nothing && push!(
-        code,
-        :(
-            function GitForge.constructfield(::GitForge.ForgeContext{$forge}, f, ::Type{Union{Date, Nothing}}, str::AbstractString)
-                Date(str, $fmt)
-            end
-        ),
-        :(
-            function GitForge.constructfield(::GitForge.ForgeContext{$forge}, f, ::Type{Union{DateTime, Nothing}}, str::AbstractString)
-                DateTime(str, $fmt)
-            end
-        ),
-    )
-    result
+    fmt === nothing && return :()
+    quote
+        function GitForge.constructfield(::GitForge.FieldContext{$forge}, ::Type{Union{Date, Nothing}}, str::AbstractString)
+            Date(str, $fmt)
+        end
+        function GitForge.constructfield(::GitForge.FieldContext{$forge}, ::Type{Union{DateTime, Nothing}}, str::AbstractString)
+            DateTime(str, $fmt)
+        end
+        function GitForge.write(::FieldContext{$forge, T, F}, buf, pos, len, date::Date; kw...) where {T, F}
+            JSON3.write(StringType(), buf, pos, len, Dates.format(date, $fmt))
+        end
+        function GitForge.write(::FieldContext{$forge, T, F}, buf, pos, len, date::DateTime; kw...) where {T, F}
+            JSON3.write(StringType(), buf, pos, len, Dates.format(date, $fmt))
+        end
+    end
 end
+
+mungetime(v) =
+    replace(replace(v, r"(\.[0-9]{3})([0-9]*)[+-]" => s"\1+"), r"(:[0-9]{2})([+-])" => s"\1.000\2")

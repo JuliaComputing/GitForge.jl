@@ -7,7 +7,7 @@ using Dates
 using Dates: Period, UTC, now
 using HTTP: HTTP
 using UUIDs: UUID
-using JSON3: JSON3, @writechar, @check
+using JSON3: JSON3, @writechar, @check, realloc!
 using StructTypes: StructTypes, UnorderedStruct, StructType, DictType, StringType
 import StructTypes: construct, constructfrom
 
