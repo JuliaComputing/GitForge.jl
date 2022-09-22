@@ -94,7 +94,7 @@ end
 @forge GitLabAPI
 
 constructfield(::ForgeContext{GitLabAPI}, f, ::Type{Union{Date, Nothing}}, v::AbstractString) =
-    Date(ZonedDateTime(v))
+    Date(v)
 
 constructfield(::ForgeContext{GitLabAPI}, f, ::Type{Union{DateTime, Nothing}}, v::AbstractString) =
     DateTime(ZonedDateTime(v))
