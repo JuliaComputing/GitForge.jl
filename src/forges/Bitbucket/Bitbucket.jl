@@ -36,8 +36,6 @@ export BitbucketAPI, Token, JWT
 # using a const here in order to export it
 const Token = GitForge.GitHub.Token
 const DEFAULT_URL = "https://api.bitbucket.org/2.0"
-const DEFAULT_TIME_IN_NO_MILLIS = dateformat"yyyy-mm-ddTHH:MM:SSz"
-const DEFAULT_TIME_OUT_NO_MILLIS = dateformat"yyyy-mm-ddTHH:MM:SS+00:00"
 const DEFAULT_TIME_OUT_MILLIS = dateformat"yyyy-mm-ddTHH:MM:SS.sss+00:00"
 
 auth_headers(::NoToken) = []
