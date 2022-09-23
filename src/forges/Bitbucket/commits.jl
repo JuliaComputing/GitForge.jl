@@ -8,7 +8,7 @@ end
     role::String
     approved::Bool
     state::String
-    participated_on::Date
+    participated_on::DateTime
 end
 
 @json struct Commit

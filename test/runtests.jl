@@ -6,7 +6,6 @@ const GF = GitForge
 using HTTP, JSON3, Logging
 using Test: @test, @testset, TestLogger, @test_throws
 
-#=
 function capture(f::Function)
     t = TestLogger()
     result = with_logger(t) do
@@ -185,8 +184,6 @@ end
     @test api.url == GitLab.DEFAULT_URL
     test_api(api, auth = true)
 end
-
-=#
 
 # encoding tests
 const ENCODING_SAMPLES = [
