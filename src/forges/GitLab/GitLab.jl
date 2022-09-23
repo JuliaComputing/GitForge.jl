@@ -29,6 +29,8 @@ export GitLabAPI, NoToken, OAuth2Token, PersonalAccessToken
 
 const DEFAULT_URL = "https://gitlab.com/api/v4"
 const DEFAULT_TIME_OUT_MILLIS = dateformat"yyyy-mm-ddTHH:MM:SS.sss+00:00"
+const REGEX_SIMPLE_DATE = r"^[0-9]{2,4}-[0-9][0-9]?-[0-9][0-9]?$"
+const SIMPLE_DATE = dateformat"y-m-d"
 
 abstract type AbstractToken end
 
@@ -97,7 +99,9 @@ end
 @forge GitLabAPI
 
 constructfield(::FieldContext{GitLabAPI}, ::Type{Union{Date, Nothing}}, v::AbstractString) =
-    Date(ZonedDateTime(mungetime(v)), UTC)
+    match(REGEX_SIMPLE_DATE, v) !== nothing ?
+        Date(v, SIMPLE_DATE) :
+        Date(ZonedDateTime(mungetime(v)), UTC)
 
 constructfield(::FieldContext{GitLabAPI}, ::Type{Union{DateTime, Nothing}}, v::AbstractString) =
     DateTime(ZonedDateTime(mungetime(v)), UTC)
