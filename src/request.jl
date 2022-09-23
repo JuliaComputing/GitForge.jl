@@ -14,7 +14,7 @@ struct HTTPError{E<:Exception} <: ForgeError
     stacktrace::StackTrace
 end
 
-HTTPError(ex::Exception, st::StackTrace) = HTTPError(nothing, nothing, ex, st)
+HTTPError(ex::Exception, st::StackTrace) = HTTPError(nothing, ex, st)
 
 """
 An error encountered during response postprocessing.
